@@ -116,7 +116,7 @@ void gen_food(Position *food, Snake *snake) {
     }
 }
 
-void poll_events(bool *running, Snake *snake, bool *input_locked) {
+void poll_events(bool *running, Snake *snake) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_EVENT_QUIT)
@@ -125,39 +125,33 @@ void poll_events(bool *running, Snake *snake, bool *input_locked) {
             return;
         if (e.key.key == SDLK_ESCAPE)
             *running = false;
-        if (*input_locked != false) {
-            switch (e.key.key) {
-            case (SDLK_RIGHT):
-                if (snake->dx != -1) {
-                    snake->dx = 1;
-                    snake->dy = 0;
-                    *input_locked = true;
-                }
-                break;
-            case (SDLK_LEFT):
-                if (snake->dx != 1) {
-                    snake->dx = -1;
-                    snake->dy = 0;
-                    *input_locked = true;
-                }
-                break;
-            case (SDLK_UP):
-                if (snake->dy != 1) {
-                    snake->dx = 0;
-                    snake->dy = -1;
-                    *input_locked = true;
-                }
-                break;
-            case (SDLK_DOWN):
-                if (snake->dy != -1) {
-                    snake->dx = 0;
-                    snake->dy = 1;
-                    *input_locked = true;
-                }
-                break;
-            default:
-                break;
+        switch (e.key.key) {
+        case (SDLK_RIGHT):
+            if (snake->dx != -1) {
+                snake->dx = 1;
+                snake->dy = 0;
             }
+            break;
+        case (SDLK_LEFT):
+            if (snake->dx != 1) {
+                snake->dx = -1;
+                snake->dy = 0;
+            }
+            break;
+        case (SDLK_UP):
+            if (snake->dy != 1) {
+                snake->dx = 0;
+                snake->dy = -1;
+            }
+            break;
+        case (SDLK_DOWN):
+            if (snake->dy != -1) {
+                snake->dx = 0;
+                snake->dy = 1;
+            }
+            break;
+        default:
+            break;
         }
     }
 }
@@ -184,7 +178,7 @@ bool snake_collision(Snake *snake) {
     return false;
 }
 
-void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score, bool *input_locked) {
+void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score) {
     fill_cell(renderer, food->x, food->y, BLACK_COLOR);
 
     if (snake->length > 1)
@@ -197,7 +191,6 @@ void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score
     snake->dx = 0;
     snake->dy = -1;
 
-    *input_locked = false;
     *score = 0;
     gen_food(food, snake);
 }
@@ -217,9 +210,23 @@ int main(void) {
     DynamicText score = create_dynamic_text();
     DynamicText high_score = create_dynamic_text();
     DynamicText fps = create_dynamic_text();
-    bool input_locked = false;
 
-    reset_game(game.renderer, &snake, &food, &score.current_state, &input_locked);
+    FILE *frp = fopen("save.bin", "rb");
+    if (!frp) {
+        FILE *fwp = fopen("save.bin", "wb");
+        if (!fwp) {
+            puts("Unable to create file to save high score.");
+            return 0;
+        }
+        int zero = 0;
+        fwrite(&zero, sizeof(int), 1, fwp);
+        fclose(fwp);
+    } else {
+        fread(&high_score.current_state, sizeof(int), 1, frp);
+        fclose(frp);
+    }
+
+    reset_game(game.renderer, &snake, &food, &score.current_state);
 
     Uint64 last_move = 0;
     int snake_speed = DEFAULT_SNAKE_SPEED;
@@ -230,40 +237,18 @@ int main(void) {
     Uint64 key_hold_start = 0;
     bool holding = false;
 
-    char buffer[128];
     // game loop
     while (game.running) {
         Uint64 now = SDL_GetTicks();
 
         // poll events
-        poll_events(&game.running, &snake, &input_locked);
-        const bool *state = SDL_GetKeyboardState(NULL);
-
-        bool is_holding =
-            state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_RIGHT];
-
-        if (is_holding) {
-            if (!holding) {
-                holding = true;
-                key_hold_start = now;
-            }
-
-            if (now - key_hold_start > 200)
-                snake_speed = FAST_SNAKE_SPEED;
-            else
-                snake_speed = DEFAULT_SNAKE_SPEED;
-        } else {
-            holding = false;
-            snake_speed = DEFAULT_SNAKE_SPEED;
-        }
+        poll_events(&game.running, &snake);
 
         // update
         if (now > last_move + snake_speed) {
             move_snake(game.renderer, &snake);
-            // unlock input after snake has successfully moved
-            input_locked = 1;
             if (wall_collision(&snake) || snake_collision(&snake))
-                reset_game(game.renderer, &snake, &food, &score.current_state, &input_locked);
+                reset_game(game.renderer, &snake, &food, &score.current_state);
 
             if (food_collision(&snake, &food)) {
                 score.current_state += 1;
@@ -278,6 +263,27 @@ int main(void) {
             }
 
             last_move = now;
+        }
+
+        const bool *state = SDL_GetKeyboardState(NULL);
+
+        bool is_holding =
+            state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_RIGHT];
+
+        // if holding a key, increase snake speed
+        if (is_holding) {
+            if (!holding) {
+                holding = true;
+                key_hold_start = now;
+            }
+
+            if (now - key_hold_start > 199)
+                snake_speed = FAST_SNAKE_SPEED;
+            else
+                snake_speed = DEFAULT_SNAKE_SPEED;
+        } else {
+            holding = false;
+            snake_speed = DEFAULT_SNAKE_SPEED;
         }
 
         frame_count++;
@@ -303,6 +309,11 @@ int main(void) {
         SDL_RenderPresent(game.renderer);
         // SDL_Delay(16);
     }
+
+    // save high score while exiting game
+    FILE *fwp = fopen("save.bin", "wb");
+    fwrite(&high_score.current_state, sizeof(int), 1, fwp);
+    fclose(fwp);
 
     // Clean
     clean_dynamic_text(&score);
