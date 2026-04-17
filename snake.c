@@ -21,6 +21,9 @@
 // grid color (SDL_Color)
 #define GC (SDL_Color){16, 16, 16, 255}
 
+#define DEFAULT_SNAKE_SPEED 100
+#define FAST_SNAKE_SPEED 80
+
 typedef struct {
     int x;
     int y;
@@ -112,41 +115,43 @@ void gen_food(Position *food, Snake *snake) {
     }
 }
 
-void poll_events(int *running, Snake *snake, int *input_locked) {
+void poll_events(bool *running, Snake *snake, bool *input_locked) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_EVENT_QUIT)
-            *running = 0;
-        if (e.type != SDL_EVENT_KEY_DOWN) return;
-        if (e.key.key == SDLK_ESCAPE) *running = 0;
-        if (*input_locked != 0) {
+            *running = false;
+        if (e.type != SDL_EVENT_KEY_DOWN)
+            return;
+        if (e.key.key == SDLK_ESCAPE)
+            *running = false;
+        if (*input_locked != false) {
             switch (e.key.key) {
             case (SDLK_RIGHT):
                 if (snake->dx != -1) {
                     snake->dx = 1;
                     snake->dy = 0;
-                    *input_locked = 1;
+                    *input_locked = true;
                 }
                 break;
             case (SDLK_LEFT):
                 if (snake->dx != 1) {
                     snake->dx = -1;
                     snake->dy = 0;
-                    *input_locked = 1;
+                    *input_locked = true;
                 }
                 break;
             case (SDLK_UP):
                 if (snake->dy != 1) {
                     snake->dx = 0;
                     snake->dy = -1;
-                    *input_locked = 1;
+                    *input_locked = true;
                 }
                 break;
             case (SDLK_DOWN):
                 if (snake->dy != -1) {
                     snake->dx = 0;
                     snake->dy = 1;
-                    *input_locked = 1;
+                    *input_locked = true;
                 }
                 break;
             default:
@@ -178,7 +183,7 @@ bool snake_collision(Snake *snake) {
     return false;
 }
 
-void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score, int *input_locked) {
+void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score, bool *input_locked) {
     fill_cell(renderer, food->x, food->y, BLACK_COLOR);
 
     if (snake->length > 1)
@@ -191,7 +196,7 @@ void reset_game(SDL_Renderer *renderer, Snake *snake, Position *food, int *score
     snake->dx = 0;
     snake->dy = -1;
 
-    *input_locked = 0;
+    *input_locked = false;
     *score = 0;
     gen_food(food, snake);
 }
@@ -207,7 +212,7 @@ int main(void) {
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     SDL_SetRenderVSync(renderer, true);
 
-    TTF_Font *font = TTF_OpenFont("font.ttf", 16);
+    TTF_Font *font = TTF_OpenFont("res/font.ttf", 16);
     if (!font)
         return -1;
 
@@ -219,12 +224,12 @@ int main(void) {
     Position food = {0};
     int score = 0;
     int high_score = 0;
-    int input_locked = 0;
+    bool input_locked = false;
 
     reset_game(renderer, &snake, &food, &score, &input_locked);
 
     Uint64 last_move = 0;
-    int snake_speed = 100;
+    int snake_speed = DEFAULT_SNAKE_SPEED;
 
     int fps = 0;
     int frame_count = 0;
@@ -235,7 +240,10 @@ int main(void) {
     SDL_Texture *score_tex = NULL, *high_tex = NULL, *fps_tex = NULL;
     float score_w, score_h, high_w, high_h, fps_w, fps_h;
 
-    int running = 1;
+    Uint64 key_hold_start = 0;
+    bool holding = false;
+
+    bool running = true;
     char buffer[128];
     // game loop
     while (running) {
@@ -243,6 +251,25 @@ int main(void) {
 
         // poll events
         poll_events(&running, &snake, &input_locked);
+        const bool *state = SDL_GetKeyboardState(NULL);
+
+        bool is_holding =
+            state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_RIGHT];
+
+        if (is_holding) {
+            if (!holding) {
+                holding = true;
+                key_hold_start = now;
+            }
+
+            if (now - key_hold_start > 200)
+                snake_speed = FAST_SNAKE_SPEED;
+            else
+                snake_speed = DEFAULT_SNAKE_SPEED;
+        } else {
+            holding = false;
+            snake_speed = DEFAULT_SNAKE_SPEED;
+        }
 
         // update
         if (now > last_move + snake_speed) {
@@ -315,7 +342,7 @@ int main(void) {
 
         // SDL_UpdateWindowSurface(window);
         SDL_RenderPresent(renderer);
-//        SDL_Delay(16);
+        //        SDL_Delay(16);
     }
 
     // Clean
