@@ -1,8 +1,11 @@
 #include "game.h"
+#include <SDL3/SDL_rect.h>
+#include <SDL3/SDL_render.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
 
 // common setup for SDL3 and SDL3_ttf
-bool init(Game* game, const char *title, int w, int h, SDL_WindowFlags flags) {
+bool init(Game *game, const char *title, int w, int h, SDL_WindowFlags flags) {
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -42,7 +45,7 @@ bool init(Game* game, const char *title, int w, int h, SDL_WindowFlags flags) {
     return true;
 }
 
-void clean(Game* game) {
+void clean(Game *game) {
     if (game->font) {
         TTF_CloseFont(game->font);
         game->font = NULL;
@@ -63,4 +66,47 @@ void clean(Game* game) {
 
     printf("[SUCCESS] All clean.\n");
     return;
+}
+
+DynamicText create_dynamic_text() {
+    return (DynamicText){
+        .current_state = 0,
+        .prev_state = -1,
+        .texture = NULL,
+        .width = 0,
+        .height = 0
+    };
+}
+
+void render_dynamic_text(DynamicText *dt, char *prefix, float x, float y, Game *game, SDL_Color color) {
+    char buffer[64];
+    // update text only if it has changed
+    if (dt->current_state != dt->prev_state || !dt->texture) {
+        // destroy previous texture if there is a change in current and prev state
+        if (dt->texture)
+            SDL_DestroyTexture(dt->texture);
+        snprintf(buffer, sizeof(buffer), "%s: %d", prefix, dt->current_state);
+        SDL_Surface *surface = TTF_RenderText_Solid(game->font, buffer, 0, color);
+        if (!surface) {
+            SDL_Log("[ERROR] TTF_RenderText_Solid: %s", SDL_GetError());
+            return;
+        }
+
+        dt->width = surface->w;
+        dt->height = surface->h;
+
+        dt->texture = SDL_CreateTextureFromSurface(game->renderer, surface);
+        dt->prev_state = dt->current_state;
+
+        SDL_DestroySurface(surface);
+    }
+    SDL_FRect dst = {x, y, dt->width, dt->height};
+    SDL_RenderTexture(game->renderer, dt->texture, NULL, &dst);
+}
+
+void clean_dynamic_text(DynamicText *dt) {
+    if (dt->texture) {
+        SDL_DestroyTexture(dt->texture);
+        dt->texture = NULL;
+    }
 }

@@ -17,7 +17,7 @@
 #define TOTAL_CELLS (CELLS_X * CELLS_Y)
 #define TEXT_COLOR (SDL_Color){200, 200, 200, 255}
 #define WHITE_COLOR (SDL_Color){255, 255, 255, 255}
-#define RED_COLOR (SDL_Color){0, 255, 255, 255}
+#define FOOD_COLOR (SDL_Color){0, 255, 255, 255}
 #define BLACK_COLOR (SDL_Color){0, 0, 0, 255}
 // grid color (SDL_Color)
 #define GC (SDL_Color){16, 16, 16, 255}
@@ -214,23 +214,18 @@ int main(void) {
 
     Snake snake = {0};
     Position food = {0};
-    int score = 0;
-    int high_score = 0;
+    DynamicText score = create_dynamic_text();
+    DynamicText high_score = create_dynamic_text();
+    DynamicText fps = create_dynamic_text();
     bool input_locked = false;
 
-    reset_game(game.renderer, &snake, &food, &score, &input_locked);
+    reset_game(game.renderer, &snake, &food, &score.current_state, &input_locked);
 
     Uint64 last_move = 0;
     int snake_speed = DEFAULT_SNAKE_SPEED;
 
-    int fps = 0;
     int frame_count = 0;
     Uint64 last_fps_time = SDL_GetTicks();
-
-    // chache vars
-    int prev_score = -1, prev_high = -1, prev_fps = -1;
-    SDL_Texture *score_tex = NULL, *high_tex = NULL, *fps_tex = NULL;
-    float score_w, score_h, high_w, high_h, fps_w, fps_h;
 
     Uint64 key_hold_start = 0;
     bool holding = false;
@@ -265,16 +260,16 @@ int main(void) {
         // update
         if (now > last_move + snake_speed) {
             move_snake(game.renderer, &snake);
-            // unlock input afte snake has successfully moved
+            // unlock input after snake has successfully moved
             input_locked = 1;
             if (wall_collision(&snake) || snake_collision(&snake))
-                reset_game(game.renderer, &snake, &food, &score, &input_locked);
+                reset_game(game.renderer, &snake, &food, &score.current_state, &input_locked);
 
             if (food_collision(&snake, &food)) {
-                score += 1;
+                score.current_state += 1;
 
-                if (score > high_score)
-                    high_score = score;
+                if (score.current_state > high_score.current_state)
+                    high_score.current_state = score.current_state;
 
                 snake.body[snake.length] = snake.body[snake.length - 1];
                 snake.length++;
@@ -287,7 +282,7 @@ int main(void) {
 
         frame_count++;
         if (now > last_fps_time + 1000) {
-            fps = frame_count;
+            fps.current_state = frame_count;
             frame_count = 0;
             last_fps_time = now;
         }
@@ -298,51 +293,21 @@ int main(void) {
         // render
         draw_grid(game.renderer);
         draw_snake(game.renderer, &snake);
-        fill_cell(game.renderer, food.x, food.y, RED_COLOR);
+        fill_cell(game.renderer, food.x, food.y, FOOD_COLOR);
 
-        if (score != prev_score || !score_tex) {
-            if (score_tex)
-                SDL_DestroyTexture(score_tex);
-            sprintf(buffer, "Score: %d", score);
-            score_tex = create_text_texture(game.renderer, game.font, buffer, TEXT_COLOR, &score_w, &score_h);
-            prev_score = score;
-        }
-        if (high_score != prev_high || !high_tex) {
-            if (high_tex)
-                SDL_DestroyTexture(high_tex);
-            sprintf(buffer, "High: %d", high_score);
-            high_tex = create_text_texture(game.renderer, game.font, buffer, TEXT_COLOR, &high_w, &high_h);
-            prev_high = high_score;
-        }
-        if (fps != prev_fps || !fps_tex) {
-            if (fps_tex)
-                SDL_DestroyTexture(fps_tex);
-            sprintf(buffer, "FPS: %d", fps);
-            fps_tex = create_text_texture(game.renderer, game.font, buffer, TEXT_COLOR, &fps_w, &fps_h);
-            prev_fps = fps;
-        }
-
-        SDL_FRect dst_score = {10, 10, score_w, score_h};
-        SDL_RenderTexture(game.renderer, score_tex, NULL, &dst_score);
-
-        SDL_FRect dst_high = {10, 30, high_w, high_h};
-        SDL_RenderTexture(game.renderer, high_tex, NULL, &dst_high);
-
-        SDL_FRect dst_fps = {10, 50, fps_w, fps_h};
-        SDL_RenderTexture(game.renderer, fps_tex, NULL, &dst_fps);
+        render_dynamic_text(&score, "Score", 10, 10, &game, TEXT_COLOR);
+        render_dynamic_text(&high_score, "High", 10, 30, &game, TEXT_COLOR);
+        render_dynamic_text(&fps, "FPS", 10, 50, &game, TEXT_COLOR);
 
         // SDL_UpdateWindowSurface(window);
         SDL_RenderPresent(game.renderer);
-        //        SDL_Delay(16);
+        // SDL_Delay(16);
     }
 
     // Clean
-    if (score_tex)
-        SDL_DestroyTexture(score_tex);
-    if (high_tex)
-        SDL_DestroyTexture(high_tex);
-    if (fps_tex)
-        SDL_DestroyTexture(fps_tex);
+    clean_dynamic_text(&score);
+    clean_dynamic_text(&high_score);
+    clean_dynamic_text(&fps);
 
     clean(&game);
 
