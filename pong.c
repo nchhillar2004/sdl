@@ -11,8 +11,9 @@
 #define BORDER_BREADTH PADDING
 
 #define BALL_SIZE 24
+#define BALL_SPEED 12
 
-#define PADDLE_WIDTH 20
+#define PADDLE_WIDTH 18
 #define PADDLE_HEIGHT 120
 #define PADDLE_SPEED 15
 
@@ -21,9 +22,9 @@
 #define LIGHT_GREY_COLOR (SDL_Color){80, 80, 80, 255}
 #define GREEN_COLOR (SDL_Color){0, 80, 0, 255}
 
-#define DOTTED_RECT_WIDTH 12
-#define DOTTED_RECT_HEIGHT 70
-#define DOTTED_RECT_GAP 30
+#define DOTTED_RECT_WIDTH 8
+#define DOTTED_RECT_HEIGHT 50
+#define DOTTED_RECT_GAP 25
 
 typedef struct {
     int x, y;   // position on screen
