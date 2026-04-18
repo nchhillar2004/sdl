@@ -21,6 +21,11 @@ typedef struct {
 } Ball;
 
 typedef struct {
+    int score_l; // left player score
+    int score_r; // right player score
+} Score;
+
+typedef struct {
     int x, y;
     int h, w;
 } Paddle;
@@ -60,7 +65,7 @@ void handle_input(Paddle *paddle) {
         paddle[1].y += PADDLE_SPEED;
 }
 
-void reset_game(Ball *ball, Paddle *paddle, int *score) {
+void reset_game(Ball *ball, Paddle *paddle, Score *score) {
     ball->x = WIDTH / 2;
     ball->y = HEIGHT / 2;
 
@@ -80,7 +85,8 @@ void reset_game(Ball *ball, Paddle *paddle, int *score) {
     paddle[1].w = PADDLE_WIDTH;
     paddle[1].h = PADDLE_HEIGHT;
 
-    *score = 0;
+    score->score_l = 0;
+    score->score_r = 0;
 }
 
 int main() {
@@ -91,10 +97,13 @@ int main() {
 
     Ball ball = {0};
     Paddle paddle[2] = {0};
-    DynamicText score = create_dynamic_text();
+    DynamicText score_l = create_dynamic_text();
+    DynamicText score_r = create_dynamic_text();
     DynamicText fps = create_dynamic_text();
 
-    reset_game(&ball, paddle, &score.current_state);
+    Score score = {0};
+
+    reset_game(&ball, paddle, &score);
 
     game.running = true;
     while (game.running) {
@@ -108,11 +117,11 @@ int main() {
         draw_ball(game.renderer, &ball);
         draw_paddle(game.renderer, &paddle[1]); // right paddle
 
-
         SDL_RenderPresent(game.renderer);
     }
 
-    clean_dynamic_text(&score);
+    clean_dynamic_text(&score_l);
+    clean_dynamic_text(&score_r);
     clean_dynamic_text(&fps);
 
     clean(&game);
