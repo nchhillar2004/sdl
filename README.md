@@ -1,7 +1,7 @@
 # Games using SDL3
 
 This repository contains recreation of few classic video games like snake game, pong, flappy bird, etc... Implemented in
-C Programming Language and SDL3 library.
+C Programming Language using SDL3 library for graphics.
 
 Before compiling from source, you need to have [SDL3](https://github.com/libsdl-org/SDL) and 
 [SDL3_ttf](https://github.com/libsdl-org/SDL_ttf) on your system.
@@ -15,4 +15,4 @@ gcc game.c snake.c -o snake.out -lSDL3 -lSDL3_ttf
 
 ## Screenshots
 
-// TODO: add screenshots
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/70429c47-41a7-423b-9330-8a4ded55b5e8" />
