@@ -116,6 +116,9 @@ int main() {
         poll_events(&game);
         handle_input(paddle);
 
+        if (score_l.current_state > 9 || score_r.current_state > 9)
+            reset_game(&ball, paddle, &score_l.current_state, &score_r.current_state);
+
         // update score
         if (ball.x <= DOTTED_RECT_WIDTH)
             score_l.current_state += 1;
@@ -125,6 +128,7 @@ int main() {
         SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
         SDL_RenderClear(game.renderer);
 
+        // draw dotted lines top-bottom
         for (int i = 0; i < HEIGHT; i += DOTTED_RECT_HEIGHT + DOTTED_RECT_GAP) {
             draw_rect(game.renderer, 0, i, DOTTED_RECT_WIDTH, DOTTED_RECT_HEIGHT, GREEN_COLOR);
             draw_rect(game.renderer, (WIDTH / 2) - (DOTTED_RECT_WIDTH / 2), i, DOTTED_RECT_WIDTH, DOTTED_RECT_HEIGHT,
@@ -135,8 +139,6 @@ int main() {
         // draw up/ down border
         draw_rect(game.renderer, 0, 0, WIDTH, BORDER_BREADTH, GREY_COLOR);
         draw_rect(game.renderer, 0, HEIGHT - BORDER_BREADTH, WIDTH, BORDER_BREADTH, GREY_COLOR);
-
-        // draw dotted line in middle
 
         draw_rect(game.renderer, paddle[0].x, paddle[0].y, paddle[0].w, paddle[0].h, WHITE_COLOR); // left paddle
         draw_rect(game.renderer, paddle[1].x, paddle[1].y, paddle[1].w, paddle[1].h, WHITE_COLOR); // right paddle
