@@ -1,22 +1,31 @@
 #include "game.h"
-#include <SDL3/SDL_keyboard.h>
-#include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_render.h>
 #include <stdbool.h>
 
-#define WIDTH 1280
-#define HEIGHT 720
+#define WIDTH 1200
+#define HEIGHT 800
 
-#define PADDING 20
+#define PADDING 25
 
-#define BALL_RADIUS 14
+#define BORDER_BREADTH PADDING
 
-#define PADDLE_WIDTH 12
-#define PADDLE_HEIGHT 84
+#define BALL_SIZE 24
+
+#define PADDLE_WIDTH 20
+#define PADDLE_HEIGHT 120
 #define PADDLE_SPEED 15
+
+#define WHITE_COLOR (SDL_Color){255, 255, 255, 255}
+#define GREY_COLOR (SDL_Color){180, 180, 180, 255}
+#define GREEN_COLOR (SDL_Color){0, 200, 0, 255}
+
+#define DOTTED_RECT_WIDTH  12
+#define DOTTED_RECT_HEIGHT 70
+#define DOTTED_RECT_GAP    30
 
 typedef struct {
     int x, y;   // position on screen
-    int r;      // radius
+    int s;      // side - it's a square
     int dx, dy; // movement/ direction
 } Ball;
 
@@ -30,16 +39,10 @@ typedef struct {
     int h, w;
 } Paddle;
 
-void draw_paddle(SDL_Renderer *renderer, Paddle *paddle) {
-    SDL_FRect p_rect = {paddle->x, paddle->y, paddle->w, paddle->h};
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderFillRect(renderer, &p_rect);
-}
-
-void draw_ball(SDL_Renderer *renderer, Ball *ball) {
-    SDL_FRect b_rect = {ball->x, ball->y, ball->r, ball->r};
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderFillRect(renderer, &b_rect);
+void draw_rect(SDL_Renderer *renderer, int x, int y, int w, int h, SDL_Color color) {
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_FRect rect = {x, y, w, h};
+    SDL_RenderFillRect(renderer, &rect);
 }
 
 void poll_events(Game *game) {
@@ -55,30 +58,30 @@ void poll_events(Game *game) {
 void handle_input(Paddle *paddle) {
     const bool *keys = SDL_GetKeyboardState(NULL);
 
-    if (keys[SDL_SCANCODE_W] && paddle[0].y > PADDING/2)
+    if (keys[SDL_SCANCODE_W] && paddle[0].y > BORDER_BREADTH)
         paddle[0].y -= PADDLE_SPEED;
-    if (keys[SDL_SCANCODE_UP] && paddle[1].y > PADDING/2)
+    if (keys[SDL_SCANCODE_UP] && paddle[1].y > BORDER_BREADTH)
         paddle[1].y -= PADDLE_SPEED;
-    if (keys[SDL_SCANCODE_S] && paddle[0].y < HEIGHT - PADDLE_HEIGHT - PADDING/2)
+    if (keys[SDL_SCANCODE_S] && paddle[0].y < HEIGHT - PADDLE_HEIGHT - BORDER_BREADTH)
         paddle[0].y += PADDLE_SPEED;
-    if (keys[SDL_SCANCODE_DOWN] && paddle[1].y < HEIGHT - PADDLE_HEIGHT - PADDING/2)
+    if (keys[SDL_SCANCODE_DOWN] && paddle[1].y < HEIGHT - PADDLE_HEIGHT - BORDER_BREADTH)
         paddle[1].y += PADDLE_SPEED;
 }
 
 void reset_game(Ball *ball, Paddle *paddle, Score *score) {
-    ball->x = WIDTH / 2;
-    ball->y = HEIGHT / 2;
+    ball->x = WIDTH / 2 - BALL_SIZE/2;
+    ball->y = HEIGHT / 2 - BALL_SIZE/2;
 
-    ball->r = BALL_RADIUS;
+    ball->s = BALL_SIZE;
 
     ball->dx = 1;
     ball->dy = 0;
 
     paddle[0].x = PADDING;
-    paddle[0].y = (HEIGHT / 2) - PADDLE_HEIGHT;
+    paddle[0].y = (HEIGHT / 2) - PADDLE_HEIGHT/2;
 
     paddle[1].x = WIDTH - PADDLE_WIDTH - PADDING;
-    paddle[1].y = (HEIGHT / 2) - PADDLE_HEIGHT;
+    paddle[1].y = (HEIGHT / 2) - PADDLE_HEIGHT/2;
 
     paddle[0].w = PADDLE_WIDTH;
     paddle[0].h = PADDLE_HEIGHT;
@@ -113,9 +116,21 @@ int main() {
         SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
         SDL_RenderClear(game.renderer);
 
-        draw_paddle(game.renderer, &paddle[0]); // left paddle
-        draw_ball(game.renderer, &ball);
-        draw_paddle(game.renderer, &paddle[1]); // right paddle
+        for (int i = 0; i < HEIGHT; i += DOTTED_RECT_HEIGHT + DOTTED_RECT_GAP) { 
+            draw_rect(game.renderer, 0, i, DOTTED_RECT_WIDTH, DOTTED_RECT_HEIGHT, GREEN_COLOR);
+            draw_rect(game.renderer, (WIDTH/2) - (DOTTED_RECT_WIDTH/2), i, DOTTED_RECT_WIDTH, DOTTED_RECT_HEIGHT, GREY_COLOR);
+            draw_rect(game.renderer, WIDTH - DOTTED_RECT_WIDTH, i, DOTTED_RECT_WIDTH, DOTTED_RECT_HEIGHT, GREEN_COLOR);
+        }
+
+        // draw up/ down border
+        draw_rect(game.renderer, 0, 0, WIDTH, BORDER_BREADTH, GREY_COLOR);
+        draw_rect(game.renderer, 0, HEIGHT - BORDER_BREADTH, WIDTH, BORDER_BREADTH, GREY_COLOR);
+
+        // draw dotted line in middle
+
+        draw_rect(game.renderer, paddle[0].x, paddle[0].y, paddle[0].w, paddle[0].h, WHITE_COLOR); // left paddle
+        draw_rect(game.renderer, paddle[1].x, paddle[1].y, paddle[1].w, paddle[1].h, WHITE_COLOR); // right paddle
+        draw_rect(game.renderer, ball.x, ball.y, ball.s, ball.s, WHITE_COLOR);                     // draw pong ball
 
         SDL_RenderPresent(game.renderer);
     }
