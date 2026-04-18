@@ -41,20 +41,6 @@ typedef struct {
     int dy;
 } Snake;
 
-SDL_Texture *create_text_texture(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color, float *w,
-                                 float *h) {
-    SDL_Surface *surface = TTF_RenderText_Solid(font, text, 0, color);
-    if (!surface)
-        return NULL;
-
-    *w = surface->w;
-    *h = surface->h;
-
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_DestroySurface(surface);
-    return texture;
-}
-
 /* OLD
 void draw_grid(SDL_Surface *surface) {
     SDL_Rect row_line = {0, 0, WIDTH, LINE_WIDTH};
