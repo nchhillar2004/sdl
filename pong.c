@@ -11,7 +11,7 @@
 #define BORDER_BREADTH PADDING
 
 #define BALL_SIZE 24
-#define BALL_SPEED 12
+#define BALL_SPEED 10
 
 #define PADDLE_WIDTH 18
 #define PADDLE_HEIGHT 120
@@ -20,11 +20,11 @@
 #define WHITE_COLOR (SDL_Color){255, 255, 255, 255}
 #define GREY_COLOR (SDL_Color){180, 180, 180, 255}
 #define LIGHT_GREY_COLOR (SDL_Color){80, 80, 80, 255}
-#define GREEN_COLOR (SDL_Color){0, 80, 0, 255}
+#define GREEN_COLOR (SDL_Color){0, 40, 0, 255}
 
-#define DOTTED_RECT_WIDTH 8
+#define DOTTED_RECT_WIDTH 5
 #define DOTTED_RECT_HEIGHT 50
-#define DOTTED_RECT_GAP 25
+#define DOTTED_RECT_GAP 30
 
 typedef struct {
     int x, y;   // position on screen
@@ -43,10 +43,43 @@ void draw_rect(SDL_Renderer *renderer, int x, int y, int w, int h, SDL_Color col
     SDL_RenderFillRect(renderer, &rect);
 }
 
-void ball_collision(Ball *ball) {
+void move_ball(Ball *ball) {
+    ball->x += ball->dx * BALL_SPEED;
+    ball->y += ball->dy * BALL_SPEED;
 }
 
-void move_ball(SDL_Renderer *renderer, Ball *ball) {
+void ball_collision(Ball *ball) {
+    if (ball->y <= BORDER_BREADTH) {
+        ball->y = BORDER_BREADTH;
+        ball->dy *= -1;
+    }
+
+    if (ball->y + ball->s >= HEIGHT - BORDER_BREADTH) {
+        ball->y = HEIGHT - BORDER_BREADTH - ball->s;
+        ball->dy *= -1;
+    }
+}
+
+void ball_paddle_collision(Ball *ball, Paddle *paddle) {
+    SDL_FRect b = {ball->x, ball->y, ball->s, ball->s};
+
+    for (int i = 0; i < 2; i++) {
+        SDL_FRect p = {paddle[i].x, paddle[i].y, paddle[i].w, paddle[i].h};
+
+        if (SDL_HasRectIntersectionFloat(&b, &p)) {
+            ball->dx *= -1;
+
+            float rel = (ball->y + ball->s / 2.0f) - (paddle[i].y + paddle[i].h / 2.0f);
+            float norm = rel / (paddle[i].h / 2.0f);
+
+            ball->dy = norm * 2.0f;
+
+            if (ball->dx > 0)
+                ball->x = paddle[i].x + paddle[i].w;
+            else
+                ball->x = paddle[i].x - ball->s;
+        }
+    }
 }
 
 void poll_events(Game *game) {
@@ -72,15 +105,18 @@ void handle_input(Paddle *paddle) {
         paddle[1].y += PADDLE_SPEED;
 }
 
-void reset_game(Ball *ball, Paddle *paddle, int *score_l, int *score_r) {
+void reset_ball(Ball *ball, int dir) {
     ball->x = WIDTH / 2 - BALL_SIZE / 2;
     ball->y = HEIGHT / 2 - BALL_SIZE / 2;
 
-    ball->s = BALL_SIZE;
-
-    // by default ball will go right after start
-    ball->dx = 1;
+    ball->dx = dir; // direction
     ball->dy = 0;
+}
+
+void reset_game(Ball *ball, Paddle *paddle, int *score_l, int *score_r) {
+    reset_ball(ball, 1);
+
+    ball->s = BALL_SIZE;
 
     paddle[0].x = PADDING;
     paddle[0].y = (HEIGHT / 2) - PADDLE_HEIGHT / 2;
@@ -111,19 +147,31 @@ int main() {
 
     reset_game(&ball, paddle, &score_l.current_state, &score_r.current_state);
 
+    int last_direction = 1; // +1 = right, -1 = left
     game.running = true;
     while (game.running) {
         poll_events(&game);
         handle_input(paddle);
 
-        if (score_l.current_state > 9 || score_r.current_state > 9)
+        move_ball(&ball);
+        ball_collision(&ball);
+        ball_paddle_collision(&ball, paddle);
+
+        if (ball.x <= 0) {
+            score_r.current_state += 1;
+            last_direction = -1;
+            reset_ball(&ball, 1);
+        }
+
+        if (ball.x + ball.s >= WIDTH) {
+            score_l.current_state += 1;
+            last_direction = 1;
+            reset_ball(&ball, -1);
+        }
+
+        if (score_l.current_state == 10 || score_r.current_state == 10)
             reset_game(&ball, paddle, &score_l.current_state, &score_r.current_state);
 
-        // update score
-        if (ball.x <= DOTTED_RECT_WIDTH)
-            score_l.current_state += 1;
-        if (ball.x >= WIDTH - DOTTED_RECT_WIDTH)
-            score_r.current_state += 1;
 
         SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
         SDL_RenderClear(game.renderer);
