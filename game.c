@@ -17,7 +17,7 @@ bool init(Game *game, const char *title, int w, int h, SDL_WindowFlags flags) {
         return false;
     }
     game->window = SDL_CreateWindow(title, w, h, flags);
-    if (!game->window) {
+    if (game->window == NULL) {
         SDL_Log("[ERROR] SDL_CreateWindow: %s", SDL_GetError());
         return false;
     }
@@ -27,7 +27,7 @@ bool init(Game *game, const char *title, int w, int h, SDL_WindowFlags flags) {
     SDL_SetWindowResizable(game->window, false);
 
     game->renderer = SDL_CreateRenderer(game->window, NULL);
-    if (!game->renderer) {
+    if (game->renderer == NULL) {
         SDL_Log("[ERROR] SDL_CreateRenderer: %s", SDL_GetError());
         return false;
     }
@@ -35,7 +35,7 @@ bool init(Game *game, const char *title, int w, int h, SDL_WindowFlags flags) {
     SDL_SetRenderVSync(game->renderer, true);
 
     game->font = TTF_OpenFont("res/font.ttf", 16);
-    if (!game->font) {
+    if (game->font == NULL) {
         SDL_Log("[ERROR] TTF_OpenFont: %s", SDL_GetError());
         return false;
     }
@@ -70,8 +70,8 @@ void clean(Game *game) {
 
 DynamicText create_dynamic_text() {
     return (DynamicText){
-        .current_state = 0,
         .prev_state = -1,
+        .current_state = 0,
         .texture = NULL,
         .width = 0,
         .height = 0

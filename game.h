@@ -28,7 +28,7 @@ void clean(Game *game);
 // Utils
 // for displaying score, fps, etc...
 DynamicText create_dynamic_text();
-void render_dynamic_text(DynamicText *dt, char* prefix, float x, float y, Game* game, SDL_Color color);
+void render_dynamic_text(DynamicText *dt, char *prefix, float x, float y, Game *game, SDL_Color color);
 void clean_dynamic_text(DynamicText *dt);
 
 #endif
