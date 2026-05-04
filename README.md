@@ -20,4 +20,8 @@ ls game.c flappy.c | entr -r sh -c 'clear && gcc game.c flappy.c -lSDL3 -lSDL3_t
 
 ## Screenshots
 
+**snake.c**
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/70429c47-41a7-423b-9330-8a4ded55b5e8" />
+
+**graph.c**
+<img width="1023" height="771" alt="image" src="https://github.com/user-attachments/assets/eb9fe175-e79b-47f6-be60-a6007babbf32" />
