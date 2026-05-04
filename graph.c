@@ -6,14 +6,19 @@
 
 #define GAP 64
 
-#define X_BOXES WIDTH/GAP
-#define Y_BOXES HEIGHT/GAP
+#define TICK_SIZE 8
+#define LABEL_OFFSET 12
+
+#define X_BOXES (WIDTH/GAP)
+#define Y_BOXES (HEIGHT/GAP)
 
 typedef struct{
     float x;
     float y;
 } Pos;
 
+// needs to optimized by storing textures in an array and render those stored textures in the main loop
+// the current implementation creates and destroys textures everytime
 void add_text(SDL_Renderer* renderer, TTF_Font* font, char* text, Pos *pos) {
     SDL_Surface* surface = TTF_RenderText_Solid(font, text, 0, (SDL_Color){255, 255, 255, 255});
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -25,57 +30,63 @@ void add_text(SDL_Renderer* renderer, TTF_Font* font, char* text, Pos *pos) {
     SDL_DestroyTexture(texture);
 }
 
-void draw_graph(SDL_Renderer* renderer, TTF_Font* font) {
+void draw_primary_graph_lines(SDL_Renderer* renderer, TTF_Font* font) {
     int x = -X_BOXES;
     int y = Y_BOXES;
-    for (int i = 64; i < WIDTH; i += GAP) { 
-        SDL_SetRenderDrawColor(renderer, 50, 180, 255, 255);
+    
+    // separate loops so we dont need to set render draw color every time
+    //
+    // render main graph lines, bright
+    SDL_SetRenderDrawColor(renderer, 50, 180, 255, 255);
+    for (int i = 64; i < WIDTH; i += GAP) 
         SDL_RenderLine(renderer, i, 0, i, HEIGHT);
+    for (int i = 64; i < HEIGHT; i += GAP)
+        SDL_RenderLine(renderer, 0, i, WIDTH, i);
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderLine(renderer, i, (float)HEIGHT/2-8, i, (float)HEIGHT/2+8);
 
-        Pos pos = {i-6, (float)HEIGHT/2+12};
-        char text[4];
+    // render ticks for scale, and show scale number with ticks
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for (int i = 64; i < WIDTH; i += GAP) { 
+        SDL_RenderLine(renderer, i, HEIGHT*0.5f - TICK_SIZE, i, HEIGHT*0.5f + TICK_SIZE);
+
+        // x scale number, -4 -2 0 2 4...
+        Pos pos = {i-6, HEIGHT * 0.5f + LABEL_OFFSET};
+        char text[16];
         x += 2;
         sprintf(text, "%d", x);
         add_text(renderer, font, text, &pos);
     }
     for (int i = 64; i < HEIGHT; i += GAP) {
-        SDL_SetRenderDrawColor(renderer, 50, 180, 255, 255);
-        SDL_RenderLine(renderer, 0, i, WIDTH, i);
+        SDL_RenderLine(renderer, WIDTH*0.5f - TICK_SIZE, i, WIDTH*0.5f + TICK_SIZE, i);
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderLine(renderer, (float)WIDTH/2-8, i, (float)WIDTH/2+8, i);
-
-        Pos pos = {(float)WIDTH/2+12, i-6};
-        char text[4];
+        // y scale number, -4 -2 0 2 4...
+        Pos pos = {WIDTH*0.5f + LABEL_OFFSET, i-6};
+        char text[16];
         y -= 2;
         sprintf(text, "%d", y);
         add_text(renderer, font, text, &pos);
     }
 }
 
-void draw_mini_graph(SDL_Renderer* renderer) {
-    for (int i = GAP/2; i < WIDTH; i += GAP) {
-        SDL_SetRenderDrawColor(renderer, 20, 30, 60, 255);
+void draw_secondary_graph_lines(SDL_Renderer* renderer) {
+    // graph lines, darker color, less visible
+    SDL_SetRenderDrawColor(renderer, 20, 30, 60, 255);
+    for (int i = GAP/2; i < WIDTH; i += GAP)
         SDL_RenderLine(renderer, i, 0, i, HEIGHT);
-
-        SDL_SetRenderDrawColor(renderer, 155, 155, 155, 255);
-        SDL_RenderLine(renderer, i, (float)HEIGHT/2-4, i, (float)HEIGHT/2+4);
-    }
-    for (int i = GAP/2; i < HEIGHT; i += GAP) {
-        SDL_SetRenderDrawColor(renderer, 20, 30, 60, 255);
+    for (int i = GAP/2; i < HEIGHT; i += GAP)
         SDL_RenderLine(renderer, 0, i, WIDTH, i);
 
-        SDL_SetRenderDrawColor(renderer, 155, 155, 155, 255);
-        SDL_RenderLine(renderer, (float)WIDTH/2-4, i, (float)WIDTH/2+4, i);
-    }
+    // small ticks, for scale
+    SDL_SetRenderDrawColor(renderer, 155, 155, 155, 255);
+    for (int i = GAP/2; i < WIDTH; i += GAP) 
+        SDL_RenderLine(renderer, i, HEIGHT*0.5f - TICK_SIZE*0.5f, i, HEIGHT*0.5f + TICK_SIZE*0.5f);
+    for (int i = GAP/2; i < HEIGHT; i += GAP)
+        SDL_RenderLine(renderer, WIDTH*0.5f - TICK_SIZE*0.5f, i, WIDTH*0.5f + TICK_SIZE*0.5f, i);
 }
 
 void parse(Pos *pos) {
-    pos->x = (float)WIDTH/2 + (pos->x * GAP/2);
-    pos->y = (float)HEIGHT/2 - (pos->y * GAP/2);
+    pos->x = WIDTH*0.5f + (pos->x * GAP/2);
+    pos->y = HEIGHT*0.5f - (pos->y * GAP/2);
 }
 
 void draw_line(SDL_Renderer* renderer, Pos *origin, Pos *dest) {
@@ -83,6 +94,7 @@ void draw_line(SDL_Renderer* renderer, Pos *origin, Pos *dest) {
 }
 
 int main() {
+    // from game.h
     Game game = {0};
 
     if (!init(&game, "Graph", WIDTH, HEIGHT, SDL_WINDOW_ALWAYS_ON_TOP))
@@ -98,6 +110,7 @@ int main() {
     parse(&dest3);
 
     bool running = true;
+    // Main loop
     while (running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) 
@@ -107,12 +120,12 @@ int main() {
         SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
         SDL_RenderClear(game.renderer);
 
-        draw_mini_graph(game.renderer);
-        draw_graph(game.renderer, game.font);
+        draw_secondary_graph_lines(game.renderer);
+        draw_primary_graph_lines(game.renderer, game.font);
 
         SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, 255);
-        SDL_RenderLine(game.renderer, (float)WIDTH/2, 0, (float)WIDTH/2, HEIGHT);
-        SDL_RenderLine(game.renderer, 0, (float)HEIGHT/2, WIDTH, (float)HEIGHT/2);
+        SDL_RenderLine(game.renderer, WIDTH*0.5f, 0, WIDTH*0.5f, HEIGHT);
+        SDL_RenderLine(game.renderer, 0, HEIGHT*0.5f, WIDTH, HEIGHT*0.5f);
 
         SDL_SetRenderDrawColor(game.renderer, 255, 255, 0, 1);
         draw_line(game.renderer, &origin0, &dest1);
