@@ -6,8 +6,8 @@
 
 #define GAP 64
 
-#define TICK_SIZE 8
-#define LABEL_OFFSET 12
+#define TICK_SIZE 4
+#define LABEL_OFFSET 6
 
 #define X_BOXES (WIDTH/GAP)
 #define Y_BOXES (HEIGHT/GAP)
@@ -38,15 +38,15 @@ void draw_primary_graph_lines(SDL_Renderer* renderer, TTF_Font* font) {
     //
     // render main graph lines, bright
     SDL_SetRenderDrawColor(renderer, 50, 180, 255, 255);
-    for (int i = 64; i < WIDTH; i += GAP) 
+    for (int i = GAP; i < WIDTH; i += GAP) 
         SDL_RenderLine(renderer, i, 0, i, HEIGHT);
-    for (int i = 64; i < HEIGHT; i += GAP)
+    for (int i = GAP; i < HEIGHT; i += GAP)
         SDL_RenderLine(renderer, 0, i, WIDTH, i);
 
 
     // render ticks for scale, and show scale number with ticks
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int i = 64; i < WIDTH; i += GAP) { 
+    for (int i = GAP; i < WIDTH; i += GAP) { 
         SDL_RenderLine(renderer, i, HEIGHT*0.5f - TICK_SIZE, i, HEIGHT*0.5f + TICK_SIZE);
 
         // x scale number, -4 -2 0 2 4...
@@ -56,7 +56,7 @@ void draw_primary_graph_lines(SDL_Renderer* renderer, TTF_Font* font) {
         sprintf(text, "%d", x);
         add_text(renderer, font, text, &pos);
     }
-    for (int i = 64; i < HEIGHT; i += GAP) {
+    for (int i = GAP; i < HEIGHT; i += GAP) {
         SDL_RenderLine(renderer, WIDTH*0.5f - TICK_SIZE, i, WIDTH*0.5f + TICK_SIZE, i);
 
         // y scale number, -4 -2 0 2 4...
