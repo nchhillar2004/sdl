@@ -6,8 +6,8 @@
 
 #define GAP 64
 
-#define TICK_SIZE 4
-#define LABEL_OFFSET 6
+#define TICK_SIZE 8
+#define LABEL_OFFSET 12
 
 #define X_BOXES (WIDTH/GAP)
 #define Y_BOXES (HEIGHT/GAP)
